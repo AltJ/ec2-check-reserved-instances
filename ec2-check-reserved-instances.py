@@ -61,17 +61,15 @@ for reservation in reservations:
 		elif instance.spot_instance_request_id:
 			sys.stderr.write("Disqualifying instance %s: spot\n" % ( instance.id ) )
 		else:
+			instance_type = instance.instance_type
 			if instance.vpc_id:
-				print "Does not support vpc yet, please be careful when trusting these results"
+				instance_type = instance.instance_type + "-vpc"
+			az = instance.placement
+			running_instances[ (instance_type, az ) ] = running_instances.get( (instance_type, az ) , 0 ) + 1
+			if "Name" in instance.tags and len(instance.tags['Name']) > 0:
+				instance_ids[ (instance_type, az ) ].append(instance.tags['Name'])
 			else:
-				az = instance.placement
-				instance_type = instance.instance_type
-				running_instances[ (instance_type, az ) ] = running_instances.get( (instance_type, az ) , 0 ) + 1
-
-				if "Name" in instance.tags and len(instance.tags['Name']) > 0:
-					instance_ids[ (instance_type, az ) ].append(instance.tags['Name'])
-				else:
-					instance_ids[ (instance_type, az ) ].append(instance.id)
+				instance_ids[ (instance_type, az ) ].append(instance.id)
 
 # pprint( running_instances )
 
@@ -83,6 +81,8 @@ for reserved_instance in ec2_conn.get_all_reserved_instances():
 	else:
 		az = reserved_instance.availability_zone
 		instance_type = reserved_instance.instance_type
+		if reserved_instance.description.find('VPC') >= 0:
+			instance_type = reserved_instance.instance_type + "-vpc"
 		reserved_instances[( instance_type, az) ] = reserved_instances.get ( (instance_type, az ), 0 )  + reserved_instance.instance_count
 
 # pprint( reserved_instances )
